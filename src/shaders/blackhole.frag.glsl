@@ -163,7 +163,8 @@ void main() {
           if (uUseDiskTexture) {
             vec2 texCoord = vec2(mod(phi, 2.0 * PI) / (2.0 * PI), 1.0 - (r - DISK_IN) / DISK_WIDTH);
             vec4 diskColor = texture2D(uDiskTexture, texCoord) / (rayDopplerFactor * diskDopplerFactor);
-            float diskAlpha = clamp(dot(diskColor.rgb, diskColor.rgb) / 4.5, 0.0, 1.0);
+            float brightness = (diskColor.r + diskColor.g + diskColor.b) / 3.0;
+            float diskAlpha = clamp(brightness * 1.5, 0.2, 1.0);
             
             if (uEnableRelBeaming)
               diskAlpha /= pow(diskDopplerFactor, 3.0);
