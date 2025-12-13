@@ -1,30 +1,26 @@
 # Blackhole
 
-Real-time Schwarzschild black hole visualization with gravitational lensing, accretion disk, and relativistic effects.
+Real-time Schwarzschild blackhole visualization demo with gravitational lensing, accretion disk, and relativistic effects.
 
-![Blackhole Demo](https://github.com/junhoyeo/blackhole/raw/main/public/assets/demo.png)
+![Blackhole Demo](./public/assets/demo.png)
 
 ## Features
 
 - **Gravitational Lensing**: Ray marching along Schwarzschild geodesics
-- **Accretion Disk**: Thin disk model with temperature gradient
+- **Accretion Disk**: Thin disk model with temperature gradient and texture support
 - **Relativistic Doppler Shift**: Color shift based on relative velocity
 - **Relativistic Beaming**: Intensity boost from approaching matter
 - **Lorentz Transform**: Light aberration from observer motion
 - **Orbital Camera**: Stable circular orbit around the black hole
-
-## Installation
-
-```bash
-npm install @junhoyeo/blackhole
-```
+- **Bloom Effect**: Integrated post-processing for realistic glow
+- **React Support**: Drop-in React components
 
 ## Usage
 
 ### Vanilla Three.js
 
 ```typescript
-import { BlackholeRenderer } from '@junhoyeo/blackhole';
+import { BlackholeRenderer } from './src/BlackholeRenderer';
 
 const renderer = new BlackholeRenderer({
   canvas: document.getElementById('canvas'),
@@ -39,6 +35,10 @@ const renderer = new BlackholeRenderer({
   bloomStrength: 1.0,
   bloomRadius: 0.5,
   bloomThreshold: 0.6,
+  // Optional textures
+  backgroundTextureUrl: '/assets/milkyway.jpg',
+  starTextureUrl: '/assets/star_noise.png',
+  diskTextureUrl: '/assets/accretion_disk.png',
 });
 
 renderer.start();
@@ -46,16 +46,45 @@ renderer.start();
 
 ### React
 
+#### Basic Background
+
 ```tsx
-import { BlackholeBackground } from '@junhoyeo/blackhole';
+import { BlackholeBackground } from './src/BlackholeBackground';
 
 function App() {
   return (
-    <BlackholeBackground
-      quality="medium"
-      cameraDistance={10}
-      enableOrbit={true}
-    />
+    <div style={{ width: '100vw', height: '100vh' }}>
+      <BlackholeBackground
+        quality="medium"
+        cameraDistance={10}
+        enableOrbit={true}
+        backgroundTextureUrl="/assets/milkyway.jpg"
+      />
+    </div>
+  );
+}
+```
+
+#### Full-screen Section
+
+The package exports a helper `HeroSection` component for easily creating full-screen sections.
+
+```tsx
+import { HeroSection } from './src/BlackholeBackground';
+
+function LandingPage() {
+  return (
+    <HeroSection
+      blackholeProps={{
+        quality: 'high',
+        enableOrbit: true,
+      }}
+    >
+      <div className="content">
+        <h1>Welcome to the Event Horizon</h1>
+        <p>Experience gravity like never before.</p>
+      </div>
+    </HeroSection>
   );
 }
 ```
@@ -68,18 +97,24 @@ function App() {
 | `cameraDistance` | `number` | `10` | Distance from black hole (Schwarzschild radii) |
 | `fieldOfView` | `number` | `90` | Camera FOV in degrees |
 | `enableOrbit` | `boolean` | `true` | Enable orbital camera motion |
+| `orbitSpeed` | `number` | `0.15` | Orbital angular velocity (rad/s) |
 | `showAccretionDisk` | `boolean` | `true` | Show accretion disk |
+| `useDiskTexture` | `boolean` | `false` | Use texture for disk instead of procedural blackbody |
 | `enableLorentzTransform` | `boolean` | `true` | Enable light aberration |
 | `enableDopplerShift` | `boolean` | `true` | Enable Doppler color shift |
 | `enableBeaming` | `boolean` | `true` | Enable relativistic beaming |
 | `bloomStrength` | `number` | `1.0` | Bloom post-process strength |
 | `bloomRadius` | `number` | `0.5` | Bloom radius |
 | `bloomThreshold` | `number` | `0.6` | Bloom threshold |
+| `backgroundTextureUrl` | `string` | `""` | URL for background environment map |
+| `starTextureUrl` | `string` | `""` | URL for star field data texture |
+| `diskTextureUrl` | `string` | `""` | URL for accretion disk texture |
+| `resolutionScale` | `number` | `1.0` | Resolution scale factor (0.5 for half res) |
 
 ## Development
 
 ```bash
-git clone https://github.com/junhoyeo/blackhole.git
+git clone https://github.com/user/blackhole.git
 cd blackhole
 npm install
 npm run dev
