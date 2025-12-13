@@ -1,8 +1,17 @@
 # Blackhole
 
+[![npm version](https://img.shields.io/npm/v/@junhoyeo/blackhole.svg)](https://www.npmjs.com/package/@junhoyeo/blackhole)
+[![npm downloads](https://img.shields.io/npm/dm/@junhoyeo/blackhole.svg)](https://www.npmjs.com/package/@junhoyeo/blackhole)
+
 Real-time Schwarzschild blackhole visualization demo with gravitational lensing, accretion disk, and relativistic effects.
 
 ![Blackhole Demo](./public/assets/demo.png)
+
+## Installation
+
+```bash
+npm install @junhoyeo/blackhole three
+```
 
 ## Features
 
@@ -20,7 +29,7 @@ Real-time Schwarzschild blackhole visualization demo with gravitational lensing,
 ### Vanilla Three.js
 
 ```typescript
-import { BlackholeRenderer } from './src/BlackholeRenderer';
+import { BlackholeRenderer } from '@junhoyeo/blackhole';
 
 const renderer = new BlackholeRenderer({
   canvas: document.getElementById('canvas'),
@@ -29,12 +38,13 @@ const renderer = new BlackholeRenderer({
   fieldOfView: 90,
   enableOrbit: true,
   showAccretionDisk: true,
+  useDiskTexture: true,
   enableLorentzTransform: true,
   enableDopplerShift: true,
   enableBeaming: true,
-  bloomStrength: 1.0,
-  bloomRadius: 0.5,
-  bloomThreshold: 0.6,
+  bloomStrength: 0.5,
+  bloomRadius: 0.3,
+  bloomThreshold: 0.8,
   // Optional textures
   backgroundTextureUrl: '/assets/milkyway.jpg',
   starTextureUrl: '/assets/star_noise.png',
@@ -49,7 +59,7 @@ renderer.start();
 #### Basic Background
 
 ```tsx
-import { BlackholeBackground } from './src/BlackholeBackground';
+import { BlackholeBackground } from '@junhoyeo/blackhole';
 
 function App() {
   return (
@@ -70,7 +80,7 @@ function App() {
 The package exports a helper `HeroSection` component for easily creating full-screen sections.
 
 ```tsx
-import { HeroSection } from './src/BlackholeBackground';
+import { HeroSection } from '@junhoyeo/blackhole';
 
 function LandingPage() {
   return (
@@ -89,6 +99,31 @@ function LandingPage() {
 }
 ```
 
+### Next.js
+
+For Next.js, use dynamic imports with SSR disabled (the renderer requires browser APIs):
+
+```tsx
+import dynamic from 'next/dynamic';
+
+const BlackholeBackground = dynamic(
+  () => import('@junhoyeo/blackhole').then((mod) => mod.BlackholeBackground),
+  { ssr: false }
+);
+
+export default function Page() {
+  return (
+    <div style={{ width: '100vw', height: '100vh' }}>
+      <BlackholeBackground
+        quality="medium"
+        enableOrbit={true}
+        backgroundTextureUrl="/milkyway.jpg"
+      />
+    </div>
+  );
+}
+```
+
 ## Configuration
 
 | Option | Type | Default | Description |
@@ -99,13 +134,13 @@ function LandingPage() {
 | `enableOrbit` | `boolean` | `true` | Enable orbital camera motion |
 | `orbitSpeed` | `number` | `0.15` | Orbital angular velocity (rad/s) |
 | `showAccretionDisk` | `boolean` | `true` | Show accretion disk |
-| `useDiskTexture` | `boolean` | `false` | Use texture for disk instead of procedural blackbody |
+| `useDiskTexture` | `boolean` | `true` | Use texture for disk instead of procedural blackbody |
 | `enableLorentzTransform` | `boolean` | `true` | Enable light aberration |
 | `enableDopplerShift` | `boolean` | `true` | Enable Doppler color shift |
 | `enableBeaming` | `boolean` | `true` | Enable relativistic beaming |
-| `bloomStrength` | `number` | `1.0` | Bloom post-process strength |
-| `bloomRadius` | `number` | `0.5` | Bloom radius |
-| `bloomThreshold` | `number` | `0.6` | Bloom threshold |
+| `bloomStrength` | `number` | `0.5` | Bloom post-process strength |
+| `bloomRadius` | `number` | `0.3` | Bloom radius |
+| `bloomThreshold` | `number` | `0.8` | Bloom threshold |
 | `backgroundTextureUrl` | `string` | `""` | URL for background environment map |
 | `starTextureUrl` | `string` | `""` | URL for star field data texture |
 | `diskTextureUrl` | `string` | `""` | URL for accretion disk texture |
@@ -114,7 +149,7 @@ function LandingPage() {
 ## Development
 
 ```bash
-git clone https://github.com/user/blackhole.git
+git clone https://github.com/junhoyeo/blackhole.git
 cd blackhole
 npm install
 npm run dev
