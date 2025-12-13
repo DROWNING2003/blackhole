@@ -11,12 +11,14 @@ export interface BlackholeBackgroundProps
   className?: string;
   style?: React.CSSProperties;
   onReady?: (renderer: BlackholeRenderer) => void;
+  onTexturesLoaded?: () => void;
 }
 
 export function BlackholeBackground({
   className,
   style,
   onReady,
+  onTexturesLoaded,
   ...config
 }: BlackholeBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -28,6 +30,7 @@ export function BlackholeBackground({
     const renderer = new BlackholeRenderer({
       canvas: canvasRef.current,
       ...config,
+      onTexturesLoaded,
     });
 
     rendererRef.current = renderer;

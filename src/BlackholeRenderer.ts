@@ -75,6 +75,9 @@ export interface BlackholeConfig {
 
   /** Resolution scale (0.5 = half resolution for performance) */
   resolutionScale?: number;
+
+  /** Callback when all textures are loaded */
+  onTexturesLoaded?: () => void;
 }
 
 interface QualityPreset {
@@ -195,7 +198,7 @@ export class BlackholeRenderer {
   private composer: EffectComposer;
   private uniforms: Record<string, THREE.IUniform>;
   private observer: BlackholeObserver;
-  private config: Required<BlackholeConfig>;
+  private config: Required<Omit<BlackholeConfig, 'onTexturesLoaded'>> & Pick<BlackholeConfig, 'onTexturesLoaded'>;
   private lastTime: number = 0;
   private animationId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -221,6 +224,7 @@ export class BlackholeRenderer {
       starTextureUrl: userConfig.starTextureUrl ?? "",
       diskTextureUrl: userConfig.diskTextureUrl ?? "",
       resolutionScale: userConfig.resolutionScale ?? 1.0,
+      onTexturesLoaded: userConfig.onTexturesLoaded,
     };
 
     this.canvas = this.config.canvas;
@@ -425,6 +429,24 @@ ${fragmentShader}`;
 
   private loadTextures(): void {
     const loader = new THREE.TextureLoader();
+    const texturesToLoad: string[] = [];
+    let loadedCount = 0;
+
+    if (this.config.backgroundTextureUrl) texturesToLoad.push('background');
+    if (this.config.starTextureUrl) texturesToLoad.push('star');
+    if (this.config.diskTextureUrl) texturesToLoad.push('disk');
+
+    const checkAllLoaded = () => {
+      loadedCount++;
+      if (loadedCount >= texturesToLoad.length) {
+        this.config.onTexturesLoaded?.();
+      }
+    };
+
+    if (texturesToLoad.length === 0) {
+      this.config.onTexturesLoaded?.();
+      return;
+    }
 
     if (this.config.backgroundTextureUrl) {
       loader.load(this.config.backgroundTextureUrl, (texture: THREE.Texture) => {
@@ -433,6 +455,7 @@ ${fragmentShader}`;
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         this.uniforms.uBackgroundTexture.value = texture;
+        checkAllLoaded();
       });
     }
 
@@ -443,6 +466,7 @@ ${fragmentShader}`;
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         this.uniforms.uStarDataTexture.value = texture;
+        checkAllLoaded();
       });
     }
 
@@ -454,6 +478,7 @@ ${fragmentShader}`;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         this.uniforms.uDiskTexture.value = texture;
         this.uniforms.uUseDiskTexture.value = true;
+        checkAllLoaded();
       });
     }
   }

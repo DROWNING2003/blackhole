@@ -1,63 +1,49 @@
 {
   "name": "@junhoyeo/blackhole",
-  "version": "1.0.1",
-  "description": "Real-time Schwarzschild blackhole visualization demo",
-  "license": "Apache-2.0",
+  "version": "1.0.2",
+  "description": "Real-time Schwarzschild blackhole visualization with gravitational lensing",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "scripts": {
     "build": "tsup",
     "dev": "vite",
-    "typecheck": "tsc --noEmit"
+    "prepublishOnly": "npm run build"
   },
-  "peerDependencies": {
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0",
-    "three": ">=0.150.0"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@types/react": "^18.2.0",
-    "@types/three": "^0.160.0",
-    "react": "^18.2.0",
-    "three": "^0.160.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.3.0",
-    "vite": "^5.0.0"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/junhoyeo/blackhole.git"
   },
   "keywords": [
     "blackhole",
     "three.js",
     "webgl",
-    "shader",
-    "react",
-    "gravitational-lensing",
-    "schwarzschild",
-    "general-relativity"
+    "visualization",
+    "react"
   ],
   "author": "Junho Yeo",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/junhoyeo/blackhole.git"
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/junhoyeo/blackhole/issues"
+  },
+  "homepage": "https://github.com/junhoyeo/blackhole#readme",
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "three": ">=0.150.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18",
+    "@types/three": "^0.160.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "three": "^0.170.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
   }
 }
