@@ -149,7 +149,7 @@ class BlackholeObserver {
   }
 
   update(delta: number): void {
-    this._theta += this._angularVelocity * delta;
+    this._theta = (this._theta + this._angularVelocity * delta) % (Math.PI * 2);
     const cos = Math.cos(this._theta);
     const sin = Math.sin(this._theta);
 
@@ -492,7 +492,7 @@ ${fragmentShader}`;
     this.observer.moving = this.config.enableOrbit;
     this.observer.update(deltaTime);
 
-    this.uniforms.uTime.value += deltaTime;
+    this.uniforms.uTime.value = (this.uniforms.uTime.value + deltaTime) % 1000.0;
     this.uniforms.uResolution.value.set(width * scale, height * scale);
     this.uniforms.uCameraPosition.value.copy(this.observer.position);
     this.uniforms.uCameraVelocity.value.copy(this.observer.velocity);

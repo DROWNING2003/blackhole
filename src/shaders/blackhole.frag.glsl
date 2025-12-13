@@ -155,8 +155,8 @@ void main() {
           float phi = atan(intersection.x, intersection.z);
           
           vec3 diskVelocity = vec3(-intersection.x, 0.0, intersection.z) / sqrt(2.0 * (r - 1.0)) / (r * r);
-          phi -= uTime;
-          phi = mod(phi, PI * 2.0);
+          phi -= mod(uTime, PI * 2.0);
+          phi = mod(phi + PI * 2.0, PI * 2.0);
           float diskGamma = 1.0 / sqrt(1.0 - dot(diskVelocity, diskVelocity));
           float diskDopplerFactor = diskGamma * (1.0 + dot(rayDir / distance, diskVelocity));
           
