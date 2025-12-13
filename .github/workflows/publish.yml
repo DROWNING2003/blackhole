@@ -14,12 +14,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -48,8 +42,28 @@ jobs:
             echo "New version $CURRENT_VERSION will be published"
           fi
 
+      - name: Debug secret
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "::error::NPM_TOKEN secret is empty or not set!"
+            echo "Please add NPM_TOKEN to repository secrets"
+            exit 1
+          else
+            echo "NPM_TOKEN is set (length: ${#NPM_TOKEN})"
+          fi
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Setup npm auth
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          cat ~/.npmrc | head -c 50
+          echo "..."
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish to npm
         if: steps.version.outputs.changed == 'true'
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
