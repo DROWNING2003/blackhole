@@ -14,6 +14,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -31,11 +37,9 @@ jobs:
       - name: Check if version changed
         id: version
         run: |
-          # Get the current version from package.json
           CURRENT_VERSION=$(jq -r '.version' package.json)
           echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           
-          # Check if this version is already published
           if npm view @junhoyeo/blackhole@$CURRENT_VERSION version 2>/dev/null; then
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "Version $CURRENT_VERSION already published"
@@ -46,8 +50,6 @@ jobs:
 
       - name: Publish to npm
         if: steps.version.outputs.changed == 'true'
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-          npm publish --access public
+        run: npm publish --access public
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
