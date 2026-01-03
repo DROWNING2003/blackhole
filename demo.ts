@@ -10,6 +10,12 @@ const renderer = new BlackholeRenderer({
   cameraDistance: 10,
   fieldOfView: 90,
   enableOrbit: true,
+  enableControls: false, // 默认关闭手动控制
+  mouseSensitivity: 0.002,
+  touchSensitivity: 0.003,
+  enableZoom: true,
+  minDistance: 2.1,
+  maxDistance: 50,
   showAccretionDisk: true,
   useDiskTexture: true,
   enableLorentzTransform: true,
@@ -42,14 +48,25 @@ function updateFPS() {
 updateFPS();
 
 const orbitToggle = document.getElementById("orbitToggle") as HTMLInputElement;
+const controlsToggle = document.getElementById("controlsToggle") as HTMLInputElement;
 const diskCheckbox = document.getElementById("disk") as HTMLInputElement;
 const dopplerCheckbox = document.getElementById("doppler") as HTMLInputElement;
 const beamingCheckbox = document.getElementById("beaming") as HTMLInputElement;
 const lorentzCheckbox = document.getElementById("lorentz") as HTMLInputElement;
 const distanceSlider = document.getElementById("distance") as HTMLInputElement;
+const mouseSensitivitySlider = document.getElementById("mouseSensitivity") as HTMLInputElement;
 
 orbitToggle.addEventListener("change", () => {
   renderer.setConfig({ enableOrbit: orbitToggle.checked });
+});
+
+controlsToggle.addEventListener("change", () => {
+  renderer.setConfig({ enableControls: controlsToggle.checked });
+  // 当启用手动控制时，自动禁用轨道运动
+  if (controlsToggle.checked && orbitToggle.checked) {
+    orbitToggle.checked = false;
+    renderer.setConfig({ enableOrbit: false });
+  }
 });
 
 diskCheckbox.addEventListener("change", () => {
@@ -70,4 +87,8 @@ lorentzCheckbox.addEventListener("change", () => {
 
 distanceSlider.addEventListener("input", () => {
   renderer.setConfig({ cameraDistance: parseFloat(distanceSlider.value) });
+});
+
+mouseSensitivitySlider.addEventListener("input", () => {
+  renderer.setConfig({ mouseSensitivity: parseFloat(mouseSensitivitySlider.value) });
 });

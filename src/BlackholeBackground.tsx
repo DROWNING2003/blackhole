@@ -53,6 +53,12 @@ export function BlackholeBackground({
     config.cameraDistance,
     config.orbitSpeed,
     config.enableOrbit,
+    config.enableControls,
+    config.mouseSensitivity,
+    config.touchSensitivity,
+    config.enableZoom,
+    config.minDistance,
+    config.maxDistance,
     config.fieldOfView,
     config.showAccretionDisk,
     config.enableLorentzTransform,
@@ -68,6 +74,7 @@ export function BlackholeBackground({
         display: "block",
         width: "100%",
         height: "100%",
+        cursor: config.enableControls ? 'grab' : 'default',
         ...style,
       }}
     />

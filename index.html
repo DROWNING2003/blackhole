@@ -73,7 +73,13 @@
   <body>
     <div id="app">
       <canvas id="canvas"></canvas>
-
+      <div class="content">
+        <h1>Blackhole</h1>
+        <p>Real-time Schwarzschild blackhole visualization with gravitational lensing and relativistic effects.</p>
+        <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.6;">
+          Enable "Manual Controls" to drag and zoom with mouse/touch
+        </p>
+      </div>
     </div>
     <div class="controls">
       <div id="fps" style="font-weight:bold;margin-bottom:8px">-- FPS</div>
@@ -86,6 +92,9 @@
       </label>
       <label>
         <input type="checkbox" id="orbitToggle" checked /> Orbit
+      </label>
+      <label>
+        <input type="checkbox" id="controlsToggle" /> Manual Controls
       </label>
       <label>
         <input type="checkbox" id="disk" checked /> Accretion Disk
@@ -101,6 +110,9 @@
       </label>
       <label>
         Distance: <input type="range" id="distance" min="3" max="15" value="10" step="0.5" />
+      </label>
+      <label>
+        Mouse Sensitivity: <input type="range" id="mouseSensitivity" min="0.001" max="0.01" value="0.002" step="0.001" />
       </label>
     </div>
     <script>

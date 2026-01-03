@@ -40,6 +40,24 @@ export interface BlackholeConfig {
   /** Orbital angular velocity (radians per second) */
   orbitSpeed?: number;
 
+  /** Enable manual camera controls (mouse/touch) */
+  enableControls?: boolean;
+
+  /** Mouse sensitivity for camera rotation */
+  mouseSensitivity?: number;
+
+  /** Touch sensitivity for camera rotation */
+  touchSensitivity?: number;
+
+  /** Enable camera distance control via scroll/pinch */
+  enableZoom?: boolean;
+
+  /** Minimum camera distance (in Schwarzschild radii) */
+  minDistance?: number;
+
+  /** Maximum camera distance (in Schwarzschild radii) */
+  maxDistance?: number;
+
   /** Show accretion disk */
   showAccretionDisk?: boolean;
 
@@ -92,6 +110,225 @@ const QUALITY_PRESETS: Record<string, QualityPreset> = {
   ultra: { integrationSteps: 1500, stepSize: 0.015 },
 };
 
+// === CAMERA CONTROLS CLASS ===
+
+class CameraControls {
+  private canvas: HTMLCanvasElement;
+  private observer: BlackholeObserver;
+  private enabled: boolean = false;
+  private mouseSensitivity: number = 0.002;
+  private touchSensitivity: number = 0.003;
+  private enableZoom: boolean = true;
+  private minDistance: number = 2.1;
+  private maxDistance: number = 50;
+
+  private isDragging: boolean = false;
+  private lastMouseX: number = 0;
+  private lastMouseY: number = 0;
+  private lastTouchDistance: number = 0;
+
+  // 绑定的事件处理器引用，用于正确移除事件监听器
+  private boundMouseDown: (event: MouseEvent) => void;
+  private boundMouseMove: (event: MouseEvent) => void;
+  private boundMouseUp: () => void;
+  private boundWheel: (event: WheelEvent) => void;
+  private boundTouchStart: (event: TouchEvent) => void;
+  private boundTouchMove: (event: TouchEvent) => void;
+  private boundTouchEnd: (event: TouchEvent) => void;
+  private boundContextMenu: (event: Event) => void;
+
+  constructor(canvas: HTMLCanvasElement, observer: BlackholeObserver) {
+    this.canvas = canvas;
+    this.observer = observer;
+    
+    // 绑定事件处理器
+    this.boundMouseDown = this.onMouseDown.bind(this);
+    this.boundMouseMove = this.onMouseMove.bind(this);
+    this.boundMouseUp = this.onMouseUp.bind(this);
+    this.boundWheel = this.onWheel.bind(this);
+    this.boundTouchStart = this.onTouchStart.bind(this);
+    this.boundTouchMove = this.onTouchMove.bind(this);
+    this.boundTouchEnd = this.onTouchEnd.bind(this);
+    this.boundContextMenu = (e) => e.preventDefault();
+    
+    this.setupEventListeners();
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    this.observer.manualControl = enabled;
+    
+    // 更新鼠标样式
+    if (enabled) {
+      this.canvas.style.cursor = 'grab';
+    } else {
+      this.canvas.style.cursor = 'default';
+      this.isDragging = false;
+    }
+  }
+
+  setMouseSensitivity(sensitivity: number): void {
+    this.mouseSensitivity = sensitivity;
+  }
+
+  setTouchSensitivity(sensitivity: number): void {
+    this.touchSensitivity = sensitivity;
+  }
+
+  setZoomEnabled(enabled: boolean): void {
+    this.enableZoom = enabled;
+  }
+
+  setDistanceRange(min: number, max: number): void {
+    this.minDistance = Math.max(min, 2.01); // 确保不会进入事件视界
+    this.maxDistance = max;
+  }
+
+  private setupEventListeners(): void {
+    // 鼠标事件
+    this.canvas.addEventListener('mousedown', this.boundMouseDown);
+    this.canvas.addEventListener('mousemove', this.boundMouseMove);
+    this.canvas.addEventListener('mouseup', this.boundMouseUp);
+    this.canvas.addEventListener('wheel', this.boundWheel);
+
+    // 触摸事件
+    this.canvas.addEventListener('touchstart', this.boundTouchStart, { passive: false });
+    this.canvas.addEventListener('touchmove', this.boundTouchMove, { passive: false });
+    this.canvas.addEventListener('touchend', this.boundTouchEnd);
+
+    // 防止右键菜单
+    this.canvas.addEventListener('contextmenu', this.boundContextMenu);
+  }
+
+  private onMouseDown(event: MouseEvent): void {
+    if (!this.enabled) return;
+    
+    this.isDragging = true;
+    this.lastMouseX = event.clientX;
+    this.lastMouseY = event.clientY;
+    this.canvas.style.cursor = 'grabbing';
+  }
+
+  private onMouseMove(event: MouseEvent): void {
+    if (!this.enabled || !this.isDragging) return;
+
+    const deltaX = event.clientX - this.lastMouseX;
+    const deltaY = event.clientY - this.lastMouseY;
+
+    // 转换为角度增量
+    const deltaYaw = -deltaX * this.mouseSensitivity;
+    const deltaPitch = -deltaY * this.mouseSensitivity;
+
+    this.observer.addManualAngles(deltaPitch, deltaYaw);
+
+    this.lastMouseX = event.clientX;
+    this.lastMouseY = event.clientY;
+  }
+
+  private onMouseUp(): void {
+    if (!this.enabled) return;
+    
+    this.isDragging = false;
+    this.canvas.style.cursor = 'grab';
+  }
+
+  private onWheel(event: WheelEvent): void {
+    if (!this.enabled || !this.enableZoom) return;
+
+    event.preventDefault();
+    
+    const zoomSpeed = 0.1;
+    const delta = event.deltaY > 0 ? 1 : -1;
+    const newDistance = this.observer.distance + delta * zoomSpeed;
+    
+    this.observer.distance = Math.max(this.minDistance, Math.min(this.maxDistance, newDistance));
+  }
+
+  private onTouchStart(event: TouchEvent): void {
+    if (!this.enabled) return;
+
+    event.preventDefault();
+    
+    if (event.touches.length === 1) {
+      // 单指拖拽
+      this.isDragging = true;
+      this.lastMouseX = event.touches[0].clientX;
+      this.lastMouseY = event.touches[0].clientY;
+    } else if (event.touches.length === 2 && this.enableZoom) {
+      // 双指缩放
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      this.lastTouchDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) +
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+    }
+  }
+
+  private onTouchMove(event: TouchEvent): void {
+    if (!this.enabled) return;
+
+    event.preventDefault();
+
+    if (event.touches.length === 1 && this.isDragging) {
+      // 单指拖拽旋转
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - this.lastMouseX;
+      const deltaY = touch.clientY - this.lastMouseY;
+
+      const deltaYaw = -deltaX * this.touchSensitivity;
+      const deltaPitch = -deltaY * this.touchSensitivity;
+
+      this.observer.addManualAngles(deltaPitch, deltaYaw);
+
+      this.lastMouseX = touch.clientX;
+      this.lastMouseY = touch.clientY;
+    } else if (event.touches.length === 2 && this.enableZoom) {
+      // 双指缩放
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const currentDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) +
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+
+      if (this.lastTouchDistance > 0) {
+        const zoomFactor = currentDistance / this.lastTouchDistance;
+        const newDistance = this.observer.distance / zoomFactor;
+        this.observer.distance = Math.max(this.minDistance, Math.min(this.maxDistance, newDistance));
+      }
+
+      this.lastTouchDistance = currentDistance;
+    }
+  }
+
+  private onTouchEnd(event: TouchEvent): void {
+    if (!this.enabled) return;
+
+    if (event.touches.length === 0) {
+      this.isDragging = false;
+      this.lastTouchDistance = 0;
+    } else if (event.touches.length === 1) {
+      // 从双指变为单指，重新设置单指位置
+      this.lastMouseX = event.touches[0].clientX;
+      this.lastMouseY = event.touches[0].clientY;
+      this.lastTouchDistance = 0;
+    }
+  }
+
+  dispose(): void {
+    // 移除事件监听器
+    this.canvas.removeEventListener('mousedown', this.boundMouseDown);
+    this.canvas.removeEventListener('mousemove', this.boundMouseMove);
+    this.canvas.removeEventListener('mouseup', this.boundMouseUp);
+    this.canvas.removeEventListener('wheel', this.boundWheel);
+    this.canvas.removeEventListener('touchstart', this.boundTouchStart);
+    this.canvas.removeEventListener('touchmove', this.boundTouchMove);
+    this.canvas.removeEventListener('touchend', this.boundTouchEnd);
+    this.canvas.removeEventListener('contextmenu', this.boundContextMenu);
+  }
+}
+
 // === OBSERVER CLASS ===
 
 class BlackholeObserver {
@@ -103,11 +340,15 @@ class BlackholeObserver {
 
   private _r: number;
   private _theta: number = 0;
+  private _phi: number = 0; // 俯仰角
   private _angularVelocity: number = 0;
   private _maxAngularVelocity: number = 0;
   private _incline: number = -5 * Math.PI / 180;
   private _moving: boolean = false;
   private _time: number = 0;
+  private _manualControl: boolean = false;
+  private _manualPitch: number = 0; // 手动俯仰角
+  private _manualYaw: number = 0;   // 手动偏航角
 
   constructor(distance: number = 8) {
     this._r = distance;
@@ -126,7 +367,7 @@ class BlackholeObserver {
   set distance(value: number) {
     this._r = Math.max(value, 2.0);
     this._maxAngularVelocity = 1 / Math.sqrt(2.0 * (this._r - 1.0)) / this._r;
-    this.position.normalize().multiplyScalar(this._r);
+    this.updatePosition();
   }
 
   get orbitSpeed(): number {
@@ -141,6 +382,80 @@ class BlackholeObserver {
     this._moving = value;
   }
 
+  get manualControl(): boolean {
+    return this._manualControl;
+  }
+
+  set manualControl(value: boolean) {
+    this._manualControl = value;
+    if (value) {
+      // 切换到手动控制时，从当前轨道位置计算初始角度
+      const currentPos = this.position.clone().normalize();
+      this._manualYaw = Math.atan2(currentPos.x, currentPos.z);
+      this._manualPitch = Math.asin(currentPos.y);
+    }
+  }
+
+  /**
+   * 设置手动控制的视角
+   * @param pitch 俯仰角 (弧度)
+   * @param yaw 偏航角 (弧度)
+   */
+  setManualAngles(pitch: number, yaw: number): void {
+    this._manualPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, pitch));
+    this._manualYaw = yaw;
+    if (this._manualControl) {
+      this.updatePosition();
+    }
+  }
+
+  /**
+   * 增加手动控制的视角
+   * @param deltaPitch 俯仰角增量 (弧度)
+   * @param deltaYaw 偏航角增量 (弧度)
+   */
+  addManualAngles(deltaPitch: number, deltaYaw: number): void {
+    this.setManualAngles(this._manualPitch + deltaPitch, this._manualYaw + deltaYaw);
+  }
+
+  private updatePosition(): void {
+    if (this._manualControl) {
+      // 手动控制模式：使用球坐标系
+      // 球坐标转换：x = r*cos(pitch)*sin(yaw), y = r*sin(pitch), z = r*cos(pitch)*cos(yaw)
+      const x = this._r * Math.cos(this._manualPitch) * Math.sin(this._manualYaw);
+      const y = this._r * Math.sin(this._manualPitch);
+      const z = this._r * Math.cos(this._manualPitch) * Math.cos(this._manualYaw);
+      
+      this.position.set(x, y, z);
+      this.velocity.set(0, 0, 0); // 手动控制时速度为0
+      
+      // 计算朝向黑洞的方向
+      this.direction.copy(this.position).negate().normalize();
+      
+      // 计算上方向
+      const worldUp = new THREE.Vector3(0, 1, 0);
+      const right = new THREE.Vector3().crossVectors(this.direction, worldUp).normalize();
+      this.up.crossVectors(right, this.direction).normalize();
+    } else {
+      // 轨道模式：保持原有逻辑
+      const cos = Math.cos(this._theta);
+      const sin = Math.sin(this._theta);
+
+      this.position.set(this._r * sin, 0, this._r * cos);
+      this.velocity.set(cos * this._angularVelocity, 0, -sin * this._angularVelocity);
+
+      const inclineMatrix = new THREE.Matrix4().makeRotationX(this._incline);
+      this.position.applyMatrix4(inclineMatrix);
+      this.velocity.applyMatrix4(inclineMatrix);
+
+      this.direction.copy(this.position).negate().normalize();
+      
+      const worldUp = new THREE.Vector3(0, 1, 0);
+      const right = new THREE.Vector3().crossVectors(this.direction, worldUp).normalize();
+      this.up.crossVectors(right, this.direction).normalize();
+    }
+  }
+
   setDirection(pitch: number, yaw: number): void {
     const originalDirection = new THREE.Vector3(0, 0, -1);
     const rotation = new THREE.Euler(pitch, yaw, 0, "YXZ");
@@ -152,38 +467,27 @@ class BlackholeObserver {
   }
 
   update(delta: number): void {
-    this._theta = (this._theta + this._angularVelocity * delta) % (Math.PI * 2);
-    const cos = Math.cos(this._theta);
-    const sin = Math.sin(this._theta);
-
-    this.position.set(this._r * sin, 0, this._r * cos);
-    this.velocity.set(cos * this._angularVelocity, 0, -sin * this._angularVelocity);
-
-    const inclineMatrix = new THREE.Matrix4().makeRotationX(this._incline);
-    this.position.applyMatrix4(inclineMatrix);
-    this.velocity.applyMatrix4(inclineMatrix);
-
-    this.direction.copy(this.position).negate().normalize();
-    
-    const worldUp = new THREE.Vector3(0, 1, 0);
-    const right = new THREE.Vector3().crossVectors(this.direction, worldUp).normalize();
-    this.up.crossVectors(right, this.direction).normalize();
-
-    if (this._moving) {
-      if (this._angularVelocity < this._maxAngularVelocity) {
-        this._angularVelocity += delta / this._r;
+    if (!this._manualControl) {
+      // 轨道模式更新
+      this._theta = (this._theta + this._angularVelocity * delta) % (Math.PI * 2);
+      
+      if (this._moving) {
+        if (this._angularVelocity < this._maxAngularVelocity) {
+          this._angularVelocity += delta / this._r;
+        } else {
+          this._angularVelocity = this._maxAngularVelocity;
+        }
       } else {
-        this._angularVelocity = this._maxAngularVelocity;
-      }
-    } else {
-      if (this._angularVelocity > 0.0) {
-        this._angularVelocity -= delta / this._r;
-      } else {
-        this._angularVelocity = 0;
-        this.velocity.set(0, 0, 0);
+        if (this._angularVelocity > 0.0) {
+          this._angularVelocity -= delta / this._r;
+        } else {
+          this._angularVelocity = 0;
+          this.velocity.set(0, 0, 0);
+        }
       }
     }
-
+    
+    this.updatePosition();
     this._time += delta;
   }
 }
@@ -198,6 +502,7 @@ export class BlackholeRenderer {
   private composer: EffectComposer;
   private uniforms: Record<string, THREE.IUniform>;
   private observer: BlackholeObserver;
+  private controls: CameraControls;
   private config: Required<Omit<BlackholeConfig, 'onTexturesLoaded'>> & Pick<BlackholeConfig, 'onTexturesLoaded'>;
   private lastTime: number = 0;
   private animationId: number | null = null;
@@ -212,6 +517,12 @@ export class BlackholeRenderer {
       fieldOfView: userConfig.fieldOfView ?? 90,
       enableOrbit: userConfig.enableOrbit ?? true,
       orbitSpeed: userConfig.orbitSpeed ?? 0.15,
+      enableControls: userConfig.enableControls ?? false,
+      mouseSensitivity: userConfig.mouseSensitivity ?? 0.002,
+      touchSensitivity: userConfig.touchSensitivity ?? 0.003,
+      enableZoom: userConfig.enableZoom ?? true,
+      minDistance: userConfig.minDistance ?? 2.1,
+      maxDistance: userConfig.maxDistance ?? 50,
       showAccretionDisk: userConfig.showAccretionDisk ?? true,
       useDiskTexture: userConfig.useDiskTexture ?? true,
       enableLorentzTransform: userConfig.enableLorentzTransform ?? true,
@@ -230,6 +541,14 @@ export class BlackholeRenderer {
     this.canvas = this.config.canvas;
     this.observer = new BlackholeObserver(this.config.cameraDistance);
     this.observer.orbitSpeed = this.config.orbitSpeed;
+
+    // 初始化相机控制器
+    this.controls = new CameraControls(this.canvas, this.observer);
+    this.controls.setEnabled(this.config.enableControls);
+    this.controls.setMouseSensitivity(this.config.mouseSensitivity);
+    this.controls.setTouchSensitivity(this.config.touchSensitivity);
+    this.controls.setZoomEnabled(this.config.enableZoom);
+    this.controls.setDistanceRange(this.config.minDistance, this.config.maxDistance);
 
     this.renderer = this.createRenderer();
     this.scene = new THREE.Scene();
@@ -514,7 +833,8 @@ ${fragmentShader}`;
     this.renderer.setSize(width, height);
     this.composer.setSize(width * scale, height * scale);
 
-    this.observer.moving = this.config.enableOrbit;
+    // 只有在非手动控制模式下才启用轨道运动
+    this.observer.moving = this.config.enableOrbit && !this.observer.manualControl;
     this.observer.update(deltaTime);
 
     this.uniforms.uTime.value = (this.uniforms.uTime.value + deltaTime) % 1000.0;
@@ -571,7 +891,35 @@ ${fragmentShader}`;
 
     if (updates.enableOrbit !== undefined) {
       this.config.enableOrbit = updates.enableOrbit;
-      this.observer.moving = updates.enableOrbit;
+      this.observer.moving = updates.enableOrbit && !this.observer.manualControl;
+    }
+
+    if (updates.enableControls !== undefined) {
+      this.config.enableControls = updates.enableControls;
+      this.controls.setEnabled(updates.enableControls);
+    }
+
+    if (updates.mouseSensitivity !== undefined) {
+      this.config.mouseSensitivity = updates.mouseSensitivity;
+      this.controls.setMouseSensitivity(updates.mouseSensitivity);
+    }
+
+    if (updates.touchSensitivity !== undefined) {
+      this.config.touchSensitivity = updates.touchSensitivity;
+      this.controls.setTouchSensitivity(updates.touchSensitivity);
+    }
+
+    if (updates.enableZoom !== undefined) {
+      this.config.enableZoom = updates.enableZoom;
+      this.controls.setZoomEnabled(updates.enableZoom);
+    }
+
+    if (updates.minDistance !== undefined || updates.maxDistance !== undefined) {
+      const minDist = updates.minDistance ?? this.config.minDistance;
+      const maxDist = updates.maxDistance ?? this.config.maxDistance;
+      this.config.minDistance = minDist;
+      this.config.maxDistance = maxDist;
+      this.controls.setDistanceRange(minDist, maxDist);
     }
 
     if (updates.fieldOfView !== undefined) {
@@ -602,10 +950,24 @@ ${fragmentShader}`;
   }
 
   /**
-   * Set camera look direction
+   * Set camera look direction (for manual control)
    */
   setLookAngles(pitch: number, yaw: number): void {
-    this.observer.setLookAngles(pitch, yaw);
+    this.observer.setManualAngles(pitch, yaw);
+  }
+
+  /**
+   * Enable or disable manual camera controls
+   */
+  setControlsEnabled(enabled: boolean): void {
+    this.setConfig({ enableControls: enabled });
+  }
+
+  /**
+   * Get current camera control state
+   */
+  getControlsEnabled(): boolean {
+    return this.config.enableControls;
   }
 
   /**
@@ -625,6 +987,9 @@ ${fragmentShader}`;
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
+
+    // 清理控制器
+    this.controls.dispose();
 
     this.renderer.dispose();
     this.composer.dispose();

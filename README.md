@@ -21,6 +21,7 @@ npm install @junhoyeo/blackhole three
 - **Relativistic Beaming**: Intensity boost from approaching matter
 - **Lorentz Transform**: Light aberration from observer motion
 - **Orbital Camera**: Stable circular orbit around the black hole
+- **Manual Camera Controls**: Mouse/touch drag to rotate view, scroll/pinch to zoom
 - **Bloom Effect**: Integrated post-processing for realistic glow
 - **React Support**: Drop-in React components
 
@@ -37,6 +38,12 @@ const renderer = new BlackholeRenderer({
   cameraDistance: 10,
   fieldOfView: 90,
   enableOrbit: true,
+  enableControls: false, // Enable mouse/touch controls
+  mouseSensitivity: 0.002,
+  touchSensitivity: 0.003,
+  enableZoom: true,
+  minDistance: 2.1,
+  maxDistance: 50,
   showAccretionDisk: true,
   useDiskTexture: true,
   enableLorentzTransform: true,
@@ -68,6 +75,7 @@ function App() {
         quality="medium"
         cameraDistance={10}
         enableOrbit={true}
+        enableControls={false} // Enable for manual camera control
         backgroundTextureUrl="/assets/milkyway.jpg"
       />
     </div>
@@ -133,6 +141,12 @@ export default function Page() {
 | `fieldOfView` | `number` | `90` | Camera FOV in degrees |
 | `enableOrbit` | `boolean` | `true` | Enable orbital camera motion |
 | `orbitSpeed` | `number` | `0.15` | Orbital angular velocity (rad/s) |
+| `enableControls` | `boolean` | `false` | Enable manual camera controls (mouse/touch) |
+| `mouseSensitivity` | `number` | `0.002` | Mouse sensitivity for camera rotation |
+| `touchSensitivity` | `number` | `0.003` | Touch sensitivity for camera rotation |
+| `enableZoom` | `boolean` | `true` | Enable camera distance control via scroll/pinch |
+| `minDistance` | `number` | `2.1` | Minimum camera distance (Schwarzschild radii) |
+| `maxDistance` | `number` | `50` | Maximum camera distance (Schwarzschild radii) |
 | `showAccretionDisk` | `boolean` | `true` | Show accretion disk |
 | `useDiskTexture` | `boolean` | `true` | Use texture for disk instead of procedural blackbody |
 | `enableLorentzTransform` | `boolean` | `true` | Enable light aberration |
