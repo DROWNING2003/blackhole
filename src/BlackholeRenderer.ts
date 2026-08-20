@@ -34,6 +34,12 @@ export interface BlackholeConfig {
   /** Camera field of view in degrees */
   fieldOfView?: number;
 
+  /** Initial camera pitch in radians when manual controls are enabled */
+  initialPitch?: number;
+
+  /** Initial camera yaw in radians when manual controls are enabled */
+  initialYaw?: number;
+
   /** Enable orbital camera motion */
   enableOrbit?: boolean;
 
@@ -515,6 +521,8 @@ export class BlackholeRenderer {
       quality: userConfig.quality ?? "medium",
       cameraDistance: userConfig.cameraDistance ?? 10,
       fieldOfView: userConfig.fieldOfView ?? 90,
+      initialPitch: userConfig.initialPitch ?? 0,
+      initialYaw: userConfig.initialYaw ?? 0,
       enableOrbit: userConfig.enableOrbit ?? true,
       orbitSpeed: userConfig.orbitSpeed ?? 0.15,
       enableControls: userConfig.enableControls ?? false,
@@ -545,6 +553,9 @@ export class BlackholeRenderer {
     // 初始化相机控制器
     this.controls = new CameraControls(this.canvas, this.observer);
     this.controls.setEnabled(this.config.enableControls);
+    if (this.config.enableControls) {
+      this.observer.setManualAngles(this.config.initialPitch, this.config.initialYaw);
+    }
     this.controls.setMouseSensitivity(this.config.mouseSensitivity);
     this.controls.setTouchSensitivity(this.config.touchSensitivity);
     this.controls.setZoomEnabled(this.config.enableZoom);
